@@ -16,7 +16,7 @@ from certbot import le_util
 
 logger = logging.getLogger(__name__)
 
-ALL_FOUR = ("cert", "privkey", "chain", "fullchain")
+ALL_FIVE = ("cert", "privkey", "chain", "fullchain", "privkeyandcert")
 
 
 def config_with_defaults(config=None):
@@ -55,7 +55,7 @@ def write_renewal_config(o_filename, n_filename, target, relevant_data):
 
     :param str o_filename: Absolute path to the previous version of config file
     :param str n_filename: Absolute path to the new destination of config file
-    :param dict target: Maps ALL_FOUR to their symlink paths
+    :param dict target: Maps ALL_FIVE to their symlink paths
     :param dict relevant_data: Renewal configuration options to save
 
     :returns: Configuration object for the new config file
@@ -63,7 +63,7 @@ def write_renewal_config(o_filename, n_filename, target, relevant_data):
 
     """
     config = configobj.ConfigObj(o_filename)
-    for kind in ALL_FOUR:
+    for kind in ALL_FIVE:
         config[kind] = target[kind]
 
     if "renewalparams" not in config:
@@ -90,7 +90,7 @@ def update_configuration(lineagename, target, cli_config):
     """Modifies lineagename's config to contain the specified values.
 
     :param str lineagename: Name of the lineage being modified
-    :param dict target: Maps ALL_FOUR to their symlink paths
+    :param dict target: Maps ALL_FIVE to their symlink paths
     :param .RenewerConfiguration cli_config: parsed command line
         arguments
 
@@ -250,7 +250,7 @@ class RenewableCert(object):  # pylint: disable=too-many-instance-attributes
         #       file at this stage?
         self.configuration = config_with_defaults(self.configfile)
 
-        if not all(x in self.configuration for x in ALL_FOUR):
+        if not all(x in self.configuration for x in ALL_FIVE):
             raise errors.CertStorageError(
                 "renewal config file {0} is missing a required "
                 "file reference".format(self.configfile))
@@ -259,6 +259,7 @@ class RenewableCert(object):  # pylint: disable=too-many-instance-attributes
         self.privkey = self.configuration["privkey"]
         self.chain = self.configuration["chain"]
         self.fullchain = self.configuration["fullchain"]
+        self.privkeyandcert = self.configuration["privkeyandcert"]
         self.live_dir = os.path.dirname(self.cert)
 
         self._fix_symlinks()
@@ -266,7 +267,7 @@ class RenewableCert(object):  # pylint: disable=too-many-instance-attributes
 
     def _check_symlinks(self):
         """Raises an exception if a symlink doesn't exist"""
-        for kind in ALL_FOUR:
+        for kind in ALL_FIVE:
             link = getattr(self, kind)
             if not os.path.islink(link):
                 raise errors.CertStorageError(
@@ -297,7 +298,7 @@ class RenewableCert(object):  # pylint: disable=too-many-instance-attributes
             if not os.path.islink(x):
                 logger.debug("Element %s is not a symbolic link.", x)
                 return False
-        for kind in ALL_FOUR:
+        for kind in ALL_FIVE:
             link = getattr(self, kind)
             target = get_link_target(link)
 
@@ -337,11 +338,11 @@ class RenewableCert(object):  # pylint: disable=too-many-instance-attributes
         #      cryptographic validation of the chain being a chain,
         #      the chain matching the cert, and the cert matching
         #      the subject key)
-        # XXX: All four of the targets are in the same directory
+        # XXX: All five of the targets are in the same directory
         #      (This check is redundant with the check that they
         #      are all in the desired directory!)
         #      len(set(os.path.basename(self.current_target(x)
-        #      for x in ALL_FOUR))) == 1
+        #      for x in ALL_FIVE))) == 1
         return True
 
     def _fix(self):
@@ -370,7 +371,7 @@ class RenewableCert(object):  # pylint: disable=too-many-instance-attributes
 
         """
         previous_symlinks = []
-        for kind in ALL_FOUR:
+        for kind in ALL_FIVE:
             link_dir = os.path.dirname(getattr(self, kind))
             link_base = "previous_{0}.pem".format(kind)
             previous_symlinks.append((kind, os.path.join(link_dir, link_base)))
@@ -400,14 +401,14 @@ class RenewableCert(object):  # pylint: disable=too-many-instance-attributes
         """Returns full path to which the specified item currently points.
 
         :param str kind: the lineage member item ("cert", "privkey",
-            "chain", or "fullchain")
+            "chain", "fullchain" or "privkeyandcert")
 
         :returns: The path to the current version of the specified
             member.
         :rtype: str or None
 
         """
-        if kind not in ALL_FOUR:
+        if kind not in ALL_FIVE:
             raise errors.CertStorageError("unknown kind of item")
         link = getattr(self, kind)
         if not os.path.exists(link):
@@ -423,13 +424,13 @@ class RenewableCert(object):  # pylint: disable=too-many-instance-attributes
         points to a file named "chain7.pem", returns the integer 7.
 
         :param str kind: the lineage member item ("cert", "privkey",
-            "chain", or "fullchain")
+            "chain", "fullchain" or "privkeyandcert")
 
         :returns: the current version of the specified member.
         :rtype: int
 
         """
-        if kind not in ALL_FOUR:
+        if kind not in ALL_FIVE:
             raise errors.CertStorageError("unknown kind of item")
         pattern = re.compile(r"^{0}([0-9]+)\.pem$".format(kind))
         target = self.current_target(kind)
@@ -452,14 +453,14 @@ class RenewableCert(object):  # pylint: disable=too-many-instance-attributes
            by this method actually exists.
 
         :param str kind: the lineage member item ("cert", "privkey",
-            "chain", or "fullchain")
+            "chain", "fullchain" or "privkeyandcert")
         :param int version: the desired version
 
         :returns: The path to the specified version of the specified member.
         :rtype: str
 
         """
-        if kind not in ALL_FOUR:
+        if kind not in ALL_FIVE:
             raise errors.CertStorageError("unknown kind of item")
         where = os.path.dirname(self.current_target(kind))
         return os.path.join(where, "{0}{1}.pem".format(kind, version))
@@ -471,13 +472,13 @@ class RenewableCert(object):  # pylint: disable=too-many-instance-attributes
         consulted to obtain the list of alternatives.
 
         :param str kind: the lineage member item (
-            ``cert``, ``privkey``, ``chain``, or ``fullchain``)
+            ``cert``, ``privkey``, ``chain``, ``fullchain`` or ``privkeyandcert``)
 
         :returns: all of the version numbers that currently exist
         :rtype: `list` of `int`
 
         """
-        if kind not in ALL_FOUR:
+        if kind not in ALL_FIVE:
             raise errors.CertStorageError("unknown kind of item")
         where = os.path.dirname(self.current_target(kind))
         files = os.listdir(where)
@@ -489,7 +490,7 @@ class RenewableCert(object):  # pylint: disable=too-many-instance-attributes
         """Newest available version of the specified kind of item?
 
         :param str kind: the lineage member item (``cert``,
-            ``privkey``, ``chain``, or ``fullchain``)
+            ``privkey``, ``chain``, ``fullchain`` or ``privkeyandcert``)
 
         :returns: the newest available version of this member
         :rtype: int
@@ -501,7 +502,7 @@ class RenewableCert(object):  # pylint: disable=too-many-instance-attributes
         """Newest version for which all items are available?
 
         :returns: the newest available version for which all members
-            (``cert, ``privkey``, ``chain``, and ``fullchain``) exist
+            (``cert, ``privkey``, ``chain``, ``fullchain`` or ``privkeyandcert``) exist
         :rtype: int
 
         """
@@ -509,7 +510,7 @@ class RenewableCert(object):  # pylint: disable=too-many-instance-attributes
         #       (it should probably return None instead)
         # TODO: this can raise a spurious AttributeError if the current
         #       link for any kind is missing (it should probably return None)
-        versions = [self.available_versions(x) for x in ALL_FOUR]
+        versions = [self.available_versions(x) for x in ALL_FIVE]
         return max(n for n in versions[0] if all(n in v for v in versions[1:]))
 
     def next_free_version(self):
@@ -524,7 +525,7 @@ class RenewableCert(object):  # pylint: disable=too-many-instance-attributes
         # This isn't self.latest_common_version() + 1 because we don't want
         # collide with a version that might exist for one file type but not
         # for the others.
-        return max(self.newest_available_version(x) for x in ALL_FOUR) + 1
+        return max(self.newest_available_version(x) for x in ALL_FIVE) + 1
 
     def has_pending_deployment(self):
         """Is there a later version of all of the managed items?
@@ -537,7 +538,7 @@ class RenewableCert(object):  # pylint: disable=too-many-instance-attributes
         """
         # TODO: consider whether to assume consistency or treat
         #       inconsistent/consistent versions differently
-        smallest_current = min(self.current_version(x) for x in ALL_FOUR)
+        smallest_current = min(self.current_version(x) for x in ALL_FIVE)
         return smallest_current < self.latest_common_version()
 
     def _update_link_to(self, kind, version):
@@ -547,11 +548,11 @@ class RenewableCert(object):  # pylint: disable=too-many-instance-attributes
         exists.)
 
         :param str kind: the lineage member item ("cert", "privkey",
-            "chain", or "fullchain")
+            "chain", "fullchain" or "privkeyandcert")
         :param int version: the desired version
 
         """
-        if kind not in ALL_FOUR:
+        if kind not in ALL_FIVE:
             raise errors.CertStorageError("unknown kind of item")
         link = getattr(self, kind)
         filename = "{0}{1}.pem".format(kind, version)
@@ -577,7 +578,7 @@ class RenewableCert(object):  # pylint: disable=too-many-instance-attributes
             for kind, link in previous_links:
                 os.symlink(self.current_target(kind), link)
 
-            for kind in ALL_FOUR:
+            for kind in ALL_FIVE:
                 self._update_link_to(kind, version)
 
             for _, link in previous_links:
@@ -780,8 +781,8 @@ class RenewableCert(object):  # pylint: disable=too-many-instance-attributes
 
         # Put the data into the appropriate files on disk
         target = dict([(kind, os.path.join(live_dir, kind + ".pem"))
-                       for kind in ALL_FOUR])
-        for kind in ALL_FOUR:
+                       for kind in ALL_FIVE])
+        for kind in ALL_FIVE:
             os.symlink(os.path.join(relative_archive, kind + "1.pem"),
                        target[kind])
         with open(target["cert"], "w") as f:
@@ -799,6 +800,11 @@ class RenewableCert(object):  # pylint: disable=too-many-instance-attributes
             # ending newline character
             logger.debug("Writing full chain to %s.", target["fullchain"])
             f.write(cert + chain)
+        with open(target["privkeyandcert"], "w") as f:
+            # also assumes that OpenSSL.crypto.dump_certificate includes
+            # ending newline character
+            logger.debug("Writing private key and cert to %s.", target["privkeyandcert"])
+            f.write(privkey + cert)
 
         # Document what we've done in a new renewal config file
         config_file.close()
@@ -849,7 +855,7 @@ class RenewableCert(object):  # pylint: disable=too-many-instance-attributes
         target = dict(
             [(kind,
               os.path.join(prefix, "{0}{1}.pem".format(kind, target_version)))
-             for kind in ALL_FOUR])
+             for kind in ALL_FIVE])
 
         # Distinguish the cases where the privkey has changed and where it
         # has not changed (in the latter case, making an appropriate symlink
@@ -880,8 +886,11 @@ class RenewableCert(object):  # pylint: disable=too-many-instance-attributes
         with open(target["fullchain"], "w") as f:
             logger.debug("Writing full chain to %s.", target["fullchain"])
             f.write(new_cert + new_chain)
+        with open(target["privkeyandcert"], "w") as f:
+            logger.debug("Writing private key and cert to %s.", target["privkeyandcert"])
+            f.write(privkey + cert)
 
-        symlinks = dict((kind, self.configuration[kind]) for kind in ALL_FOUR)
+        symlinks = dict((kind, self.configuration[kind]) for kind in ALL_FIVE)
         # Update renewal config file
         self.configfile = update_configuration(
             self.lineagename, symlinks, cli_config)
