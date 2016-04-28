@@ -287,14 +287,14 @@ class RenewableCert(object):  # pylint: disable=too-many-instance-attributes
 
         """
         # Each element must be referenced with an absolute path
-        for x in (self.cert, self.privkey, self.chain, self.fullchain):
+        for x in (self.cert, self.privkey, self.chain, self.fullchain, self.privkeyandcert):
             if not os.path.isabs(x):
                 logger.debug("Element %s is not referenced with an "
                              "absolute path.", x)
                 return False
 
         # Each element must exist and be a symbolic link
-        for x in (self.cert, self.privkey, self.chain, self.fullchain):
+        for x in (self.cert, self.privkey, self.chain, self.fullchain, self.privkeyandcert):
             if not os.path.islink(x):
                 logger.debug("Element %s is not a symbolic link.", x)
                 return False
