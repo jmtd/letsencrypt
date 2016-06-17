@@ -12,7 +12,7 @@ import pytz
 
 from certbot import configuration
 from certbot import errors
-from certbot.storage import ALL_FOUR
+from certbot.storage import ALL_FIVE
 
 from certbot.tests import test_util
 
@@ -21,14 +21,14 @@ CERT = test_util.load_cert('cert.pem')
 
 
 def unlink_all(rc_object):
-    """Unlink all four items associated with this RenewableCert."""
-    for kind in ALL_FOUR:
+    """Unlink all five items associated with this RenewableCert."""
+    for kind in ALL_FIVE:
         os.unlink(getattr(rc_object, kind))
 
 
 def fill_with_sample_data(rc_object):
-    """Put dummy data into all four files of this RenewableCert."""
-    for kind in ALL_FOUR:
+    """Put dummy data into all five files of this RenewableCert."""
+    for kind in ALL_FIVE:
         with open(getattr(rc_object, kind), "w") as f:
             f.write(kind)
 
@@ -59,7 +59,7 @@ class BaseRenewableCertTest(unittest.TestCase):
         os.makedirs(os.path.join(self.tempdir, "renewal"))
 
         config = configobj.ConfigObj()
-        for kind in ALL_FOUR:
+        for kind in ALL_FIVE:
             config[kind] = os.path.join(self.tempdir, "live", "example.org",
                                         kind + ".pem")
         config.filename = os.path.join(self.tempdir, "renewal",
@@ -84,7 +84,7 @@ class BaseRenewableCertTest(unittest.TestCase):
         shutil.rmtree(self.tempdir)
 
     def _write_out_ex_kinds(self):
-        for kind in ALL_FOUR:
+        for kind in ALL_FIVE:
             where = getattr(self.test_rc, kind)
             os.symlink(os.path.join("..", "..", "archive", "example.org",
                                     "{0}12.pem".format(kind)), where)
@@ -103,7 +103,7 @@ class RenewableCertTests(BaseRenewableCertTest):
 
     def test_initialization(self):
         self.assertEqual(self.test_rc.lineagename, "example.org")
-        for kind in ALL_FOUR:
+        for kind in ALL_FIVE:
             self.assertEqual(
                 getattr(self.test_rc, kind), os.path.join(
                     self.tempdir, "live", "example.org", kind + ".pem"))
@@ -151,19 +151,19 @@ class RenewableCertTests(BaseRenewableCertTest):
         self.assertFalse(self.test_rc._consistent())
         unlink_all(self.test_rc)
         # Items must point to desired place if they are relative
-        for kind in ALL_FOUR:
+        for kind in ALL_FIVE:
             os.symlink(os.path.join("..", kind + "17.pem"),
                        getattr(self.test_rc, kind))
         self.assertFalse(self.test_rc._consistent())
         unlink_all(self.test_rc)
         # Items must point to desired place if they are absolute
-        for kind in ALL_FOUR:
+        for kind in ALL_FIVE:
             os.symlink(os.path.join(self.tempdir, kind + "17.pem"),
                        getattr(self.test_rc, kind))
         self.assertFalse(self.test_rc._consistent())
         unlink_all(self.test_rc)
         # Items must point to things that exist
-        for kind in ALL_FOUR:
+        for kind in ALL_FIVE:
             os.symlink(os.path.join("..", "..", "archive", "example.org",
                                     kind + "17.pem"),
                        getattr(self.test_rc, kind))
@@ -217,7 +217,7 @@ class RenewableCertTests(BaseRenewableCertTest):
 
     def test_latest_and_next_versions(self):
         for ver in xrange(1, 6):
-            for kind in ALL_FOUR:
+            for kind in ALL_FIVE:
                 where = getattr(self.test_rc, kind)
                 if os.path.islink(where):
                     os.unlink(where)
@@ -252,7 +252,7 @@ class RenewableCertTests(BaseRenewableCertTest):
         # If we have everything from a much later version, it does change
         # the result
         ver = 17
-        for kind in ALL_FOUR:
+        for kind in ALL_FIVE:
             where = getattr(self.test_rc, kind)
             if os.path.islink(where):
                 os.unlink(where)
@@ -265,7 +265,7 @@ class RenewableCertTests(BaseRenewableCertTest):
 
     def test_update_link_to(self):
         for ver in xrange(1, 6):
-            for kind in ALL_FOUR:
+            for kind in ALL_FIVE:
                 where = getattr(self.test_rc, kind)
                 if os.path.islink(where):
                     os.unlink(where)
@@ -301,7 +301,7 @@ class RenewableCertTests(BaseRenewableCertTest):
 
     def test_update_all_links_to_success(self):
         for ver in xrange(1, 6):
-            for kind in ALL_FOUR:
+            for kind in ALL_FIVE:
                 where = getattr(self.test_rc, kind)
                 if os.path.islink(where):
                     os.unlink(where)
@@ -313,7 +313,7 @@ class RenewableCertTests(BaseRenewableCertTest):
         self.assertEqual(self.test_rc.latest_common_version(), 5)
         for ver in xrange(1, 6):
             self.test_rc.update_all_links_to(ver)
-            for kind in ALL_FOUR:
+            for kind in ALL_FIVE:
                 self.assertEqual(ver, self.test_rc.current_version(kind))
             self.assertEqual(self.test_rc.latest_common_version(), 5)
 
@@ -331,7 +331,7 @@ class RenewableCertTests(BaseRenewableCertTest):
             mock_unlink.side_effect = unlink_or_raise
             self.assertRaises(ValueError, self.test_rc.update_all_links_to, 12)
 
-        for kind in ALL_FOUR:
+        for kind in ALL_FIVE:
             self.assertEqual(self.test_rc.current_version(kind), 12)
 
     def test_update_all_links_to_full_failure(self):
@@ -347,12 +347,12 @@ class RenewableCertTests(BaseRenewableCertTest):
             mock_unlink.side_effect = unlink_or_raise
             self.assertRaises(ValueError, self.test_rc.update_all_links_to, 12)
 
-        for kind in ALL_FOUR:
+        for kind in ALL_FIVE:
             self.assertEqual(self.test_rc.current_version(kind), 11)
 
     def test_has_pending_deployment(self):
         for ver in xrange(1, 6):
-            for kind in ALL_FOUR:
+            for kind in ALL_FIVE:
                 where = getattr(self.test_rc, kind)
                 if os.path.islink(where):
                     os.unlink(where)
@@ -363,7 +363,7 @@ class RenewableCertTests(BaseRenewableCertTest):
                 self.assertEqual(ver, self.test_rc.current_version(kind))
         for ver in xrange(1, 6):
             self.test_rc.update_all_links_to(ver)
-            for kind in ALL_FOUR:
+            for kind in ALL_FIVE:
                 self.assertEqual(ver, self.test_rc.current_version(kind))
             if ver < 5:
                 self.assertTrue(self.test_rc.has_pending_deployment())
@@ -456,7 +456,7 @@ class RenewableCertTests(BaseRenewableCertTest):
         self.test_rc.configuration["autodeploy"] = "1"
         # No pending deployment
         for ver in xrange(1, 6):
-            for kind in ALL_FOUR:
+            for kind in ALL_FIVE:
                 where = getattr(self.test_rc, kind)
                 if os.path.islink(where):
                     os.unlink(where)
@@ -483,7 +483,7 @@ class RenewableCertTests(BaseRenewableCertTest):
         self.test_rc.configuration["autorenew"] = "0"
         self.assertFalse(self.test_rc.should_autorenew())
         self.test_rc.configuration["autorenew"] = "1"
-        for kind in ALL_FOUR:
+        for kind in ALL_FIVE:
             where = getattr(self.test_rc, kind)
             os.symlink(os.path.join("..", "..", "archive", "example.org",
                                     "{0}12.pem".format(kind)), where)
@@ -501,7 +501,7 @@ class RenewableCertTests(BaseRenewableCertTest):
         mock_rv.side_effect = lambda x: x
 
         for ver in xrange(1, 6):
-            for kind in ALL_FOUR:
+            for kind in ALL_FIVE:
                 where = getattr(self.test_rc, kind)
                 if os.path.islink(where):
                     os.unlink(where)
@@ -536,7 +536,7 @@ class RenewableCertTests(BaseRenewableCertTest):
             self.assertEqual("privkey3.pem", os.path.basename(os.readlink(
                 self.test_rc.version("privkey", i))))
 
-        for kind in ALL_FOUR:
+        for kind in ALL_FIVE:
             self.assertEqual(self.test_rc.available_versions(kind), range(1, 9))
             self.assertEqual(self.test_rc.current_version(kind), 3)
         # Test updating from latest version rather than old version
@@ -544,7 +544,7 @@ class RenewableCertTests(BaseRenewableCertTest):
         self.assertEqual(
             9, self.test_rc.save_successor(8, "last", None,
                                            "attempt", self.cli_config))
-        for kind in ALL_FOUR:
+        for kind in ALL_FIVE:
             self.assertEqual(self.test_rc.available_versions(kind),
                              range(1, 10))
             self.assertEqual(self.test_rc.current_version(kind), 8)
@@ -737,7 +737,7 @@ class RenewableCertTests(BaseRenewableCertTest):
         self.assertRaises(errors.CertStorageError,
                           storage.RenewableCert,
                           self.config.filename, self.cli_config)
-        os.symlink("missing", self.config[ALL_FOUR[0]])
+        os.symlink("missing", self.config[ALL_FIVE[0]])
         self.assertRaises(errors.CertStorageError,
                           storage.RenewableCert,
                           self.config.filename, self.cli_config)
@@ -752,7 +752,7 @@ class RenewableCertTests(BaseRenewableCertTest):
             f.write("[renewalparams]\nuseful = value # A useful value\n"
                     "useless = value # Not needed\n")
         target = {}
-        for x in ALL_FOUR:
+        for x in ALL_FIVE:
             target[x] = "somewhere"
         relevant_data = {"useful": "new_value"}
         from certbot import storage
